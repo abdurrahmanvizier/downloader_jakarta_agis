@@ -8,21 +8,26 @@ Created on Sun Sep  6 18:21:04 2020
 from buildLog import Log
 from bs4 import BeautifulSoup
 from datetime import datetime
+from fake_useragent import UserAgent
 
+import headers_list as hl
 import requests
 import platform
 import urllib
+import sys
 import os
 
 
 class CovidExtrac:
 
-    def __init__(self, url = None, download_date = None, path_download = None, path_log = None):
+    def __init__(self, url = None, download_date = None, download_spesific_date = None, path_download = None, path_log = None):
 
         self.url = url
-        self.headers = {'User-Agent': 'Mozilla/5.0'}
+        self.headers_download = hl.fix_user_agent_download
+        self.headers_scraping = hl.fix_user_agent_scraping
         self.format_download = 'https://drive.google.com/uc?export=download&id='
         self.download_date = download_date
+        self.download_spesific_date = download_spesific_date
 
         Current_Date = datetime.now().strftime("%A, %d %b %Y %H:%m:%S")
 
@@ -53,8 +58,18 @@ class CovidExtrac:
 
         # Change Directory Download to path_download Value
         os.chdir(path_download)
+        # print(path_download)
 
-    def download_data(self, date_file, url_download):
+    def download_data(self, date_file, url_download, Finish = False):
+
+        """ Add New Random User Agent for Header
+        For Download Using Header
+        """
+
+        opener = urllib.request.build_opener()
+        opener.addheaders = [self.headers_download]
+        urllib.request.install_opener(opener)
+
         if self.download_date == "all":
                 
             self.logger.info("Download data {} with {}".format(date_file, url_download))
@@ -70,8 +85,22 @@ class CovidExtrac:
             
             if current_date in date_file:
                 self.logger.info("Download data {} with {}".format(date_file, url_download))
+            
+                urllib.request.urlretrieve(url_download, "Standar Kelurahan Data Corona ({x}).xlsx".format(x = date_file))
+
+                Finish = True
+        
+        elif self.download_date == "delta":
+            current_date = datetime.strptime(self.download_spesific_date, "%Y%m%d").strftime("%#d %B %Y")
+
+            if current_date in date_file:
+                self.logger.info("Download data {} with {}".format(date_file, url_download))
 
                 urllib.request.urlretrieve(url_download, "Standar Kelurahan Data Corona ({x}).xlsx".format(x = date_file))
+
+                Finish = True
+
+        return Finish        
     
     def MyWho(self):
         # Funtion for Check Variable
@@ -79,7 +108,7 @@ class CovidExtrac:
 
     def mainProc(self):
         # Getting URL Contents
-        page_get = requests.get(self.url, headers=self.headers, verify=False)
+        page_get = requests.get(self.url, headers=self.headers_scraping, verify=False)
 
         # Convert URL Contents to HTML Parser
         soup_url = BeautifulSoup(page_get.text, 'html.parser')
@@ -122,24 +151,48 @@ class CovidExtrac:
                 download_url = "{}{}".format(self.format_download, id_gs)
 
                 # Download Data with Current Date, URL Download
-                self.download_data(x.text, download_url)
+                Finish = self.download_data(x.text, download_url)
+
+                if Finish:
+                    break
 
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Downloader Tools for Jakarta Agis Website")
-    parser.add_argument('-u',"--url", help="The URL Jakarta Agis", default="https://riwayat-file-covid-19-dki-jakarta-jakartagis.hub.arcgis.com/")
-    parser.add_argument("-dd", "--download-date", help="Status Download Date", choices=['all', 'current'], default="all")
-    parser.add_argument("-pd", "--path-download", help="Location to Store File Downloaded", default=None)
-    parser.add_argument("-pl", "--path-log", help="Location to Store File Log", default=None)
+    parser = argparse.ArgumentParser(description="Downloader Tools for Jakarta Agis Website", add_help=False)
+    parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                    help='Show this help message and exit.')
+    parser.add_argument('-u',"--url", help="The URL Jakarta Agis", 
+                    default="https://riwayat-file-covid-19-dki-jakarta-jakartagis.hub.arcgis.com/")
+    parser.add_argument("-pd", "--path-download", help="Location to Store File Downloaded, Default Current Path Script", 
+                    default=None)
+    parser.add_argument("-pl", "--path-log", help="Location to Store File Log, Default Current Path Script", 
+                    default=None)
+    parser.add_argument("-dd-s", "--download-spesific-date", type=str, 
+                    help="Spesific Date for Download Data, Required if download-date is delta. Format = 'yyyymmdd'")
+    parser.add_argument('-v', '--version', action='version',
+                    version='%(prog)s 0.0.2', help="Show program's version number and exit.")
+
+    requiredNamed = parser.add_argument_group('required arguments')
+    requiredNamed.add_argument("-dd", "--download-date", type=str, help="Type Download", choices=['full', "current", 'delta'])
+
+    # parser.parse_args(['-h', requiredNamed])
     
     args = parser.parse_args()
 
-    print(args)
+    if args.download_date is None:
+        parser.print_help()
+        parser.error("-dd (--download-date) requires")
+    elif args.download_date == "delta" and args.download_spesific_date is None:
+        parser.print_help()
+        parser.error("-dd-s (--download-spesific-date) requires if download-date is delta")
+
+    # print(args)
 
     url = args.url
     path_download = args.path_download
     path_log = args.path_log
     download_date = args.download_date
+    download_spesific_date = args.download_spesific_date
 
-    CovidExtrac(url = url, download_date = download_date, path_download = path_download, path_log = path_log).mainProc()
+    CovidExtrac(url = url, download_date = download_date, download_spesific_date = download_spesific_date, path_download = path_download, path_log = path_log).mainProc()
