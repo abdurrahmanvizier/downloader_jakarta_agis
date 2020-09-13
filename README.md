@@ -23,4 +23,16 @@ optional arguments:
 required arguments:
   -dd {full,current,delta}, --download-date {full,current,delta}
                         Type Download
+                        
+                        
+#### Download All Date
+> python downloaddata_covid.py -dd all
+
+#### Download Current Date
+> python downloaddata_covid.py -dd current
+
+#### Download Spesific Date
+> python downloaddata_covid.py -dd delta -dd-s 20200909
+<>
 ```
+
