@@ -61,6 +61,8 @@ class CovidExtrac:
         # print(path_download)
 
     def download_data(self, date_file, url_download, Finish = False):
+        
+        self.headers_download = hl.fix_user_agent_download
 
         """ Add New Random User Agent for Header
         For Download Using Header
