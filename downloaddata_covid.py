@@ -70,7 +70,7 @@ class CovidExtrac:
         opener.addheaders = [self.headers_download]
         urllib.request.install_opener(opener)
 
-        if self.download_date == "all":
+        if self.download_date == "full":
                 
             self.logger.info("Download data {} with {}".format(date_file, url_download))
 
